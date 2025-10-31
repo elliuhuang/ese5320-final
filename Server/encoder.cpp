@@ -18,8 +18,6 @@
 #define pipe_depth 4
 #define DONE_BIT_L (1 << 7)
 #define DONE_BIT_H (1 << 15)
-#define WINDOW_SIZE 17
-#define MODULO uint64_t ((uint64_t)1 << 63)
 
 int offset = 0;
 unsigned char* file;
@@ -41,16 +39,8 @@ void handle_input(int argc, char* argv[], int* blocksize) {
 	}
 }
 
-int cdc(unsigned char * IN, unsigned char* OUT);
-void sha_hash(unsigned char *IN, int chunk_indx_start, int chunk_indx_end, unsigned char *chunk_ptr, int* chunk_size);
-void lzw(unsigned char* IN, unsigned char* OUT);
-
-
 int main(int argc, char* argv[]) {
 	stopwatch ethernet_timer;
-	stopwatch cdc_timer;
-	stopwatch hash_timer;
-	stopwatch lzw_timer;
 	unsigned char* input[NUM_PACKETS];
 	int writer = 0;
 	int done = 0;
@@ -116,31 +106,13 @@ int main(int argc, char* argv[]) {
 
 		// get packet
 		unsigned char* buffer = input[writer];
-		unsigned char* Temp1;
-		//unsigned char* Temp2;
-		unsigned char* outBuffer;
-
-		int chunkCount = 999;
-		cdc_timer.start();
-		chunkCount = cdc(buffer,Temp1);
-		cdc_timer.stop();
-
-		std::cout << "Number of chunks: " << chunkCount << std::endl;
-
-
-		lzw_timer.start();
-		lzw(Temp1, outBuffer);
-		lzw_timer.stop();
-
-
-
 
 		// decode
-		done = outBuffer[1] & DONE_BIT_L;
-		length = outBuffer[0] | (outBuffer[1] << 8);
+		done = buffer[1] & DONE_BIT_L;
+		length = buffer[0] | (buffer[1] << 8);
 		length &= ~DONE_BIT_H;
 		//printf("length: %d offset %d\n",length,offset);
-		memcpy(&file[offset], &outBuffer[HEADER], length);
+		memcpy(&file[offset], &buffer[HEADER], length);
 
 		offset += length;
 		writer++;
@@ -159,91 +131,10 @@ int main(int argc, char* argv[]) {
 	free(file);
 	std::cout << "--------------- Key Throughputs ---------------" << std::endl;
 	float ethernet_latency = ethernet_timer.latency() / 1000.0;
-	float cdc_latency = cdc_timer.latency() / 1000.0;
-	//float hash_latency = hash_timer.latency() / 1000.0;
-	float lzw_latency = lzw_timer.latency() / 1000.0;
-
-	float input_throughput = (bytes_written * 8 / 1000000.0) / (ethernet_latency + cdc_latency + lzw_latency); // Mb/s
+	float input_throughput = (bytes_written * 8 / 1000000.0) / ethernet_latency; // Mb/s
 	std::cout << "Input Throughput to Encoder: " << input_throughput << " Mb/s."
 			<< " (Latency: " << ethernet_latency << "s)." << std::endl;
 
 	return 0;
-}
-
-uint64_t hash_func(unsigned char * input, unsigned int pos) {
-	uint64_t hash = 0;
-	uint64_t prime_power = 3;
-	for(int i = 0 ; i < WINDOW_SIZE; i++) {
-		hash += input[pos + WINDOW_SIZE - 1 - i] * prime_power;
-		prime_power *= 3;
-	}
-	return hash;
-}
-int cdc(unsigned char *IN, unsigned char *OUT) {
-	//bool first_chunk = 1;
-	int chunkCount = 0;
-	//bool chunk_started = 1;
-	unsigned char * chunk_ptr = (unsigned char *) malloc(sizeof(unsigned char) * (NUM_ELEMENTS + HEADER));
-	int prev_chunk_index = 0;
-	int chunk_index = 0;
-
-	int out_size = 0;
-	int prev_out_index = 0;
-	int out_index = 0;
-	for(int i = WINDOW_SIZE; i < NUM_ELEMENTS + 2 - WINDOW_SIZE; i++) {
-		if((hash_func(IN, i) % (1 << 15)) == 0) {
-			//sha_hash();
-			//chunk_started = !chunk_started;
-
-			sha_hash(IN, prev_chunk_index, chunk_index, chunk_ptr, &out_size);
-			chunkCount++;
-
-			out_index = prev_out_index + out_size;
-
-			for(int i = prev_out_index; i < out_index; i++) {
-				
-				OUT[i] = chunk_ptr[i - prev_out_index];
-			}
-			prev_out_index = out_index;
-			prev_chunk_index = chunk_index + 1;
-		} 
-			chunk_index++;
-		
-		
-	}
-	std::cout << "Number of chunks: " << chunkCount << std::endl;
-	free(chunk_ptr);
-	return chunkCount;
-}
-void sha_hash(unsigned char *IN, int chunk_indx_start, int chunk_indx_end, unsigned char *chunk_ptr, int* chunk_size) {
-	*chunk_size = chunk_indx_end - chunk_indx_start;
-	//unsigned char hash_buff[8];
-	//HASH here 
-	int x = 0;
-	uint64_t sum = 0;
-	uint64_t temp = 0;
-
-	for(x = chunk_indx_start; x < chunk_indx_end - 8; x+=8) {
-
-		for( int j = 0; j < 8; j ++) {
-			temp += (IN[x + j]) << (8 * j);
-		}
-		sum += temp % (MODULO);
-		temp = 0;
-	}
-	for(int i = x; x < chunk_indx_end; x ++) {
-		temp += (IN[i]) << (8 * (i - x));
-	}
-	sum += temp % (MODULO);
-
-	for(int i = chunk_indx_start; i < chunk_indx_end; i++) {
-		chunk_ptr[i - chunk_indx_start] = IN[chunk_indx_start];
-	}
-}
-
-void lzw(unsigned char *IN, unsigned char *OUT) {
-	for(int i = 0; i < NUM_ELEMENTS + 2; i++) {
-		OUT[i] = IN[i];
-	}
 }
 
