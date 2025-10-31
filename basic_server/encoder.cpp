@@ -177,6 +177,7 @@ uint64_t hash_func(unsigned char * input, unsigned int pos) {
 }
 void cdc(unsigned char *IN, unsigned char *OUT) {
 	//bool first_chunk = 1;
+	int chunkCount = 0;
 	bool chunk_started = 1;
 	unsigned char * chunk_ptr = (unsigned char *) malloc(sizeof(unsigned char) * (NUM_ELEMENTS + HEADER));
 	int prev_chunk_index = 0;
@@ -191,7 +192,7 @@ void cdc(unsigned char *IN, unsigned char *OUT) {
 			//chunk_started = !chunk_started;
 
 			sha_hash(IN, prev_chunk_index, chunk_index, chunk_ptr, &out_size);
-
+			chunkCount++;
 
 			out_index = prev_out_index + out_size;
 
@@ -206,10 +207,29 @@ void cdc(unsigned char *IN, unsigned char *OUT) {
 		
 		
 	}
+	std::cout << "Number of chunks: " << chunkCount << std::endl;
 	free(chunk_ptr);
 }
 void sha_hash(unsigned char *IN, int chunk_indx_start, int chunk_indx_end, unsigned char *chunk_ptr, int* chunk_size) {
 	*chunk_size = chunk_indx_end - chunk_indx_start;
+	//unsigned char hash_buff[8];
+	//HASH here 
+	int x = 0;
+	uint64_t sum = 0;
+	uint64_t temp = 0;
+	for(x = chunk_indx_start; x < chunk_indx_end - 8; x+=8) {
+
+		for( int j = 0; j < 8; j ++) {
+			temp += (IN[x + j]) << (8 * j);
+		}
+		sum += temp % (1<<64);
+		temp = 0;
+	}
+	for(int i = x; x < chunk_indx_end; x ++) {
+		temp += (IN[x]) << (8 * (x - (chunk_indx_end - 8)));
+	}
+	sum += temp % (1 << 64);
+
 	for(int i = chunk_indx_start; i < chunk_indx_end; i++) {
 		chunk_ptr[i - chunk_indx_start] = IN[chunk_indx_start];
 	}
