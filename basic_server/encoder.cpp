@@ -86,6 +86,8 @@ int main(int argc, char* argv[]) {
 
 	// get packet
 	unsigned char* buffer = input[writer];
+	unsigned char* Temp1;
+	unsigned char* outBuffer;
 
 	// decode
 	done = buffer[1] & DONE_BIT_L;
@@ -116,9 +118,9 @@ int main(int argc, char* argv[]) {
 
 		// get packet
 		unsigned char* buffer = input[writer];
-		unsigned char* Temp1;
+		Temp1= (unsigned char *) malloc(sizeof(unsigned char) * (NUM_ELEMENTS + HEADER));
 		//unsigned char* Temp2;
-		unsigned char* outBuffer;
+		outBuffer = (unsigned char *) malloc(sizeof(unsigned char) * (NUM_ELEMENTS + HEADER));
 
 		int chunkCount = 999;
 		cdc_timer.start();
@@ -157,6 +159,9 @@ int main(int argc, char* argv[]) {
 	}
 
 	free(file);
+	free(Temp1);
+	free(outBuffer);
+	
 	std::cout << "--------------- Key Throughputs ---------------" << std::endl;
 	float ethernet_latency = ethernet_timer.latency() / 1000.0;
 	float cdc_latency = cdc_timer.latency() / 1000.0;
