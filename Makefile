@@ -60,7 +60,7 @@ CLIENT_EXE = client
 CLIENT_SOURCES_MAC = Client/client-mac.cpp
 CLIENT_EXE_MAC = client_mac
 
-SERVER_SOURCES = Server/encoder.cpp Server/server.cpp
+SERVER_SOURCES = basic_server/encoder.cpp basic_server/server.cpp
 SERVER_OBJECTS =$(SERVER_SOURCES:.cpp=.o)
 SERVER_EXE = encoder
 
@@ -136,4 +136,3 @@ clean:
 # 	$(VPP) $(VPP_OPTS) -k mmult_fpga --compile -I"$(<D)" --config fpga/design.cfg -o"$@" "$<"
 # $(XCLBIN): $(XO)
 # 	$(VPP) $(VPP_OPTS) --link --config fpga/design.cfg -o"$@" $(+)
-
