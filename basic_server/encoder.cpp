@@ -41,7 +41,7 @@ void handle_input(int argc, char* argv[], int* blocksize) {
 	}
 }
 
-void cdc(unsigned char * IN, unsigned char* OUT);
+int cdc(unsigned char * IN, unsigned char* OUT);
 void sha_hash(unsigned char *IN, int chunk_indx_start, int chunk_indx_end, unsigned char *chunk_ptr, int* chunk_size);
 void lzw(unsigned char* IN, unsigned char* OUT);
 
@@ -120,9 +120,12 @@ int main(int argc, char* argv[]) {
 		//unsigned char* Temp2;
 		unsigned char* outBuffer;
 
+		int chunkCount = 999;
 		cdc_timer.start();
-		cdc(buffer,Temp1);
+		chunkCount = cdc(buffer,Temp1);
 		cdc_timer.stop();
+
+		std::cout << "Number of chunks: " << chunkCount << std::endl;
 
 
 		lzw_timer.start();
@@ -176,7 +179,7 @@ uint64_t hash_func(unsigned char * input, unsigned int pos) {
 	}
 	return hash;
 }
-void cdc(unsigned char *IN, unsigned char *OUT) {
+int cdc(unsigned char *IN, unsigned char *OUT) {
 	//bool first_chunk = 1;
 	int chunkCount = 0;
 	//bool chunk_started = 1;
@@ -210,6 +213,7 @@ void cdc(unsigned char *IN, unsigned char *OUT) {
 	}
 	std::cout << "Number of chunks: " << chunkCount << std::endl;
 	free(chunk_ptr);
+	return chunkCount;
 }
 void sha_hash(unsigned char *IN, int chunk_indx_start, int chunk_indx_end, unsigned char *chunk_ptr, int* chunk_size) {
 	*chunk_size = chunk_indx_end - chunk_indx_start;
