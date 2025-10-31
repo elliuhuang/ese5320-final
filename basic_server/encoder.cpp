@@ -19,6 +19,7 @@
 #define DONE_BIT_L (1 << 7)
 #define DONE_BIT_H (1 << 15)
 #define WINDOW_SIZE 17
+#define MODULO uint64_t ((uint64_t)1 << 63)
 
 int offset = 0;
 unsigned char* file;
@@ -217,18 +218,19 @@ void sha_hash(unsigned char *IN, int chunk_indx_start, int chunk_indx_end, unsig
 	int x = 0;
 	uint64_t sum = 0;
 	uint64_t temp = 0;
+
 	for(x = chunk_indx_start; x < chunk_indx_end - 8; x+=8) {
 
 		for( int j = 0; j < 8; j ++) {
 			temp += (IN[x + j]) << (8 * j);
 		}
-		sum += temp % (1<<64);
+		sum += temp % (MODULO);
 		temp = 0;
 	}
 	for(int i = x; x < chunk_indx_end; x ++) {
 		temp += (IN[i]) << (8 * (i - x));
 	}
-	sum += temp % (1 << 63);
+	sum += temp % (MODULO);
 
 	for(int i = chunk_indx_start; i < chunk_indx_end; i++) {
 		chunk_ptr[i - chunk_indx_start] = IN[chunk_indx_start];
