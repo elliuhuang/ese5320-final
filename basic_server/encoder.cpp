@@ -41,6 +41,9 @@ void handle_input(int argc, char* argv[], int* blocksize) {
 
 int main(int argc, char* argv[]) {
 	stopwatch ethernet_timer;
+	stopwatch cdc_timer;
+	stopwatch hash_timer;
+	stopwatch lzw_timer;
 	unsigned char* input[NUM_PACKETS];
 	int writer = 0;
 	int done = 0;
@@ -106,13 +109,31 @@ int main(int argc, char* argv[]) {
 
 		// get packet
 		unsigned char* buffer = input[writer];
+		unsigned char* Temp1;
+		unsigned char* Temp2;
+		unsigned char* outBuffer;
+
+		cdc_timer.start();
+		cdc(buffer,Temp1);
+		cdc_timer.stop();
+
+		hash_timer.start();
+		hash(Temp1, Temp2);
+		hash_timer.start();
+
+		lzw_timer.start();
+		lzw(Temp2, outBuffer);
+		lzw_timer.start();
+
+
+
 
 		// decode
-		done = buffer[1] & DONE_BIT_L;
-		length = buffer[0] | (buffer[1] << 8);
+		done = outBuffer[1] & DONE_BIT_L;
+		length = outBuffer[0] | (outBuffer[1] << 8);
 		length &= ~DONE_BIT_H;
 		//printf("length: %d offset %d\n",length,offset);
-		memcpy(&file[offset], &buffer[HEADER], length);
+		memcpy(&file[offset], &outBuffer[HEADER], length);
 
 		offset += length;
 		writer++;
@@ -131,10 +152,31 @@ int main(int argc, char* argv[]) {
 	free(file);
 	std::cout << "--------------- Key Throughputs ---------------" << std::endl;
 	float ethernet_latency = ethernet_timer.latency() / 1000.0;
-	float input_throughput = (bytes_written * 8 / 1000000.0) / ethernet_latency; // Mb/s
+	float cdc_latency = cdc_timer.latency() / 1000.0;
+	float hash_latency = hash_timer.latency() / 1000.0;
+	float lzw_latency = lzw_timer.latency() / 1000.0;
+
+	float input_throughput = (bytes_written * 8 / 1000000.0) / (ethernet_latency + cdc_latency + hash_latency + lzw_latency); // Mb/s
 	std::cout << "Input Throughput to Encoder: " << input_throughput << " Mb/s."
 			<< " (Latency: " << ethernet_latency << "s)." << std::endl;
 
 	return 0;
+}
+
+void cdc(unsigned char *IN, unsigned char *OUT) {
+	for(int i = 0; i < NUM_ELEMENTS + 2; i++) {
+		OUT[i] = IN[i];
+	}
+}
+void hash(unsigned char *IN, unsigned char *OUT) {
+	for(int i = 0; i < NUM_ELEMENTS + 2; i++) {
+		OUT[i] = IN[i];
+	}
+}
+
+void lzw(unsigned char *IN, unsigned char *OUT) {
+	for(int i = 0; i < NUM_ELEMENTS + 2; i++) {
+		OUT[i] = IN[i];
+	}
 }
 
