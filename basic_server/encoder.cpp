@@ -178,7 +178,7 @@ uint64_t hash_func(unsigned char * input, unsigned int pos) {
 void cdc(unsigned char *IN, unsigned char *OUT) {
 	//bool first_chunk = 1;
 	bool chunk_started = 1;
-	unsigned char * chunk_ptr;
+	unsigned char * chunk_ptr = (unsigned char *) malloc(sizeof(unsigned char) * (NUM_ELEMENTS + HEADER));
 	int prev_chunk_index = 0;
 	int chunk_index = 0;
 
@@ -206,6 +206,7 @@ void cdc(unsigned char *IN, unsigned char *OUT) {
 		
 		
 	}
+	free(chunk_ptr);
 }
 void sha_hash(unsigned char *IN, int chunk_indx_start, int chunk_indx_end, unsigned char *chunk_ptr, int* chunk_size) {
 	*chunk_size = chunk_indx_end - chunk_indx_start;
