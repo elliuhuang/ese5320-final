@@ -29,7 +29,7 @@ void handle_input(int argc, char* argv[], int* sleep_time, char** ip,
 		switch (x) {
 		case 's':
 			*sleep_time = atoi(optarg);
-			printf("sleep is set to %d optarg\n", *sleep_time);
+			printf("sleep is set to %d\n", *sleep_time);
 			break;
 		case 'i':
 			*ip = optarg;
