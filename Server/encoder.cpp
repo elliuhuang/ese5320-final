@@ -30,7 +30,7 @@ void handle_input(int argc, char* argv[], int* blocksize) {
 		switch (x) {
 		case 'b':
 			*blocksize = atoi(optarg);
-			printf("blocksize is set to %d optarg\n", *blocksize);
+			printf("blocksize is set to %d\n", *blocksize);
 			break;
 		case ':':
 			printf("-%c without parameter\n", optopt);
