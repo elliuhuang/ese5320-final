@@ -13,6 +13,12 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include "stopwatch.h"
+#include "hash_table.h"
+
+#include "cdc.cpp"
+#include "sha.cpp"
+#include "dedup.cpp"
+#include "lzw.cpp"
 
 #define NUM_PACKETS 8
 #define pipe_depth 4
@@ -24,6 +30,8 @@
 int offset = 0;
 unsigned char* file;
 
+hash_table_t global_hash_table;
+
 void handle_input(int argc, char* argv[], int* blocksize) {
 	int x;
 	extern char *optarg;
@@ -32,7 +40,7 @@ void handle_input(int argc, char* argv[], int* blocksize) {
 		switch (x) {
 		case 'b':
 			*blocksize = atoi(optarg);
-			printf("blocksize is set to %d optarg\n", *blocksize);
+			printf("blocksize is set to %d\n", *blocksize);
 			break;
 		case ':':
 			printf("-%c without parameter\n", optopt);
@@ -41,22 +49,61 @@ void handle_input(int argc, char* argv[], int* blocksize) {
 	}
 }
 
-int cdc(unsigned char * IN, unsigned char* OUT);
-void sha_hash(unsigned char *IN, int chunk_indx_start, int chunk_indx_end, unsigned char *chunk_ptr, int* chunk_size);
-void lzw(unsigned char* IN, unsigned char* OUT);
+void encode(unsigned char * block, int block_length) {
+	int * chunk_indices = (int *)malloc(sizeof(int) * BLOCKSIZE);
+	int num_chunks = 0;
+	cdc(block, block_length, chunk_indices, &num_chunks);
 
+	for (int i = 0; i < num_chunks - 1; i++) {
+		int chunk_len = chunk_indices[i+1] - chunk_indices[i];
+		unsigned char * hash_num = (unsigned char *)malloc(sizeof(unsigned char) * 32);
+		// uint256_t hash_num = 0;
+		sha(block[chunk_indices[i]], chunk_len, hash_num);
+
+		// this is dedup
+		// hash_index is -1 if its a duplicate
+		// otherwise it returns the index of the chunk that was encoded before
+		int hash_index = search(global_hash_table, hash_num); 
+
+		
+		// dedup(hash_num, &hash_index, hash_map_t global_hash_table); // hash_index is -1 if its a duplicate
+		// no more dedup
+
+		if (hash_index == -1) {
+			unsigned char * compressed = (unsigned char*)malloc(sizeof(unsigned char) * BLOCKSIZE);
+			int compressed_length;
+			lzw(chunk_indices[i], chunk_len, compressed, &compressed_length);
+
+			memcpy(&file[offset], compressed, compressed_length);
+			offset += compressed_length;
+
+			insert(global_hash_table, hash_num);
+
+			free(compressed);
+		} else {
+			uint32_t header = hash_index << 1;
+			header |= 1;
+
+			memcpy(&file[offset], header, sizeof(header));
+			offset += sizeof(header);
+		}
+
+		free(hash_num);
+	}
+
+	free(chunk_indices);
+}
 
 int main(int argc, char* argv[]) {
 	stopwatch ethernet_timer;
-	stopwatch cdc_timer;
-	stopwatch hash_timer;
-	stopwatch lzw_timer;
 	unsigned char* input[NUM_PACKETS];
 	int writer = 0;
 	int done = 0;
 	int length = 0;
 	int count = 0;
 	ESE532_Server server;
+
+	initializeHashMap(global_hash_table);
 
 	// default is 2k
 	int blocksize = BLOCKSIZE;
@@ -86,8 +133,7 @@ int main(int argc, char* argv[]) {
 
 	// get packet
 	unsigned char* buffer = input[writer];
-	unsigned char* Temp1= (unsigned char *) malloc(sizeof(unsigned char) * (NUM_ELEMENTS + HEADER));
-	unsigned char* outBuffer = (unsigned char *) malloc(sizeof(unsigned char) * (NUM_ELEMENTS + HEADER));
+
 
 	// decode
 	done = buffer[1] & DONE_BIT_L;
@@ -98,9 +144,11 @@ int main(int argc, char* argv[]) {
 
 	// we are just memcpy'ing here, but you should call your
 	// top function here.
-	memcpy(&file[offset], &buffer[HEADER], length);
+	encode(buffer[HEADER], length);
 
-	offset += length;
+	// memcpy(&file[offset], &buffer[HEADER], length);
+
+	// offset += length;
 	writer++;
 
 	//last message
@@ -118,33 +166,16 @@ int main(int argc, char* argv[]) {
 
 		// get packet
 		unsigned char* buffer = input[writer];
-		//Temp1= (unsigned char *) malloc(sizeof(unsigned char) * (NUM_ELEMENTS + HEADER));
-		//unsigned char* Temp2;
-		// outBuffer = (unsigned char *) malloc(sizeof(unsigned char) * (NUM_ELEMENTS + HEADER));
-
-		int chunkCount = 999;
-		cdc_timer.start();
-		chunkCount = cdc(buffer,Temp1);
-		cdc_timer.stop();
-
-		std::cout << "Number of chunks: " << chunkCount << std::endl;
-
-
-		lzw_timer.start();
-		lzw(Temp1, outBuffer);
-		lzw_timer.stop();
-
-
-
 
 		// decode
-		done = outBuffer[1] & DONE_BIT_L;
-		length = outBuffer[0] | (outBuffer[1] << 8);
+		done = buffer[1] & DONE_BIT_L;
+		length = buffer[0] | (buffer[1] << 8);
 		length &= ~DONE_BIT_H;
 		//printf("length: %d offset %d\n",length,offset);
-		memcpy(&file[offset], &outBuffer[HEADER], length);
+		// memcpy(&file[offset], &buffer[HEADER], length);
+		encode(buffer, length)
 
-		offset += length;
+		// offset += length;
 		writer++;
 	}
 
@@ -159,96 +190,11 @@ int main(int argc, char* argv[]) {
 	}
 
 	free(file);
-	free(Temp1);
-	free(outBuffer);
-
 	std::cout << "--------------- Key Throughputs ---------------" << std::endl;
 	float ethernet_latency = ethernet_timer.latency() / 1000.0;
-	float cdc_latency = cdc_timer.latency() / 1000.0;
-	//float hash_latency = hash_timer.latency() / 1000.0;
-	float lzw_latency = lzw_timer.latency() / 1000.0;
-
-	float input_throughput = (bytes_written * 8 / 1000000.0) / (ethernet_latency + cdc_latency + lzw_latency); // Mb/s
+	float input_throughput = (bytes_written * 8 / 1000000.0) / ethernet_latency; // Mb/s
 	std::cout << "Input Throughput to Encoder: " << input_throughput << " Mb/s."
 			<< " (Latency: " << ethernet_latency << "s)." << std::endl;
 
 	return 0;
 }
-
-uint64_t hash_func(unsigned char * input, unsigned int pos) {
-	uint64_t hash = 0;
-	uint64_t prime_power = 3;
-	for(int i = 0 ; i < WINDOW_SIZE; i++) {
-		hash += input[pos + WINDOW_SIZE - 1 - i] * prime_power;
-		prime_power *= 3;
-	}
-	return hash;
-}
-int cdc(unsigned char *IN, unsigned char *OUT) {
-	//bool first_chunk = 1;
-	int chunkCount = 0;
-	//bool chunk_started = 1;
-	unsigned char * chunk_ptr = (unsigned char *) malloc(sizeof(unsigned char) * (NUM_ELEMENTS + HEADER));
-	int prev_chunk_index = 0;
-	int chunk_index = 0;
-
-	int out_size = 0;
-	int prev_out_index = 0;
-	int out_index = 0;
-	for(int i = WINDOW_SIZE; i < NUM_ELEMENTS + 2 - WINDOW_SIZE; i++) {
-		if((hash_func(IN, i) % (1 << 15)) == 0) {
-			//sha_hash();
-			//chunk_started = !chunk_started;
-
-			sha_hash(IN, prev_chunk_index, chunk_index, chunk_ptr, &out_size);
-			chunkCount++;
-
-			out_index = prev_out_index + out_size;
-
-			for(int i = prev_out_index; i < out_index; i++) {
-				
-				OUT[i] = chunk_ptr[i - prev_out_index];
-			}
-			prev_out_index = out_index;
-			prev_chunk_index = chunk_index + 1;
-		} 
-			chunk_index++;
-		
-		
-	}
-	std::cout << "Number of chunks: " << chunkCount << std::endl;
-	free(chunk_ptr);
-	return chunkCount;
-}
-void sha_hash(unsigned char *IN, int chunk_indx_start, int chunk_indx_end, unsigned char *chunk_ptr, int* chunk_size) {
-	*chunk_size = chunk_indx_end - chunk_indx_start;
-	//unsigned char hash_buff[8];
-	//HASH here 
-	int x = 0;
-	uint64_t sum = 0;
-	uint64_t temp = 0;
-
-	for(x = chunk_indx_start; x < chunk_indx_end - 8; x+=8) {
-
-		for( int j = 0; j < 8; j ++) {
-			temp += (IN[x + j]) << (8 * j);
-		}
-		sum += temp % (MODULO);
-		temp = 0;
-	}
-	for(int i = x; x < chunk_indx_end; x ++) {
-		temp += (IN[i]) << (8 * (i - x));
-	}
-	sum += temp % (MODULO);
-
-	for(int i = chunk_indx_start; i < chunk_indx_end; i++) {
-		chunk_ptr[i - chunk_indx_start] = IN[chunk_indx_start];
-	}
-}
-
-void lzw(unsigned char *IN, unsigned char *OUT) {
-	for(int i = 0; i < NUM_ELEMENTS + 2; i++) {
-		OUT[i] = IN[i];
-	}
-}
-
