@@ -65,8 +65,6 @@ for arg in $@; do
     fi
 done
 
-echo $CLIENT_COMMANDS
-
 echo -e "${YELLOW}Compiling ${ENCODER_FILE} and ${CLIENT_FILE}${NC}"
 g++ ${ENCODER_FILE} ${SERVER_FILE} -o encoder
 g++ ${CLIENT_FILE} -o client
