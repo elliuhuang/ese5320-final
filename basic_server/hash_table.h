@@ -1,5 +1,9 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
 typedef struct hash_node {
-    unsigned char* key;
+    unsigned char* key; // 32-byte hash
     int value;
     struct hash_node* next;
 } hash_node_t;
@@ -17,3 +21,4 @@ int hashFunction(hash_map_t* map, unsigned char* key);
 void insert(hash_map_t* map, unsigned char* key);
 int compareHash(unsigned char * hash1, unsigned char * hash2);
 int search(hash_map_t* map, unsigned char* key);
+void freeHashMap(hash_map_t* map);
