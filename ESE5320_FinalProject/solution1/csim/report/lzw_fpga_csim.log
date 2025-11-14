@@ -1,0 +1,116 @@
+INFO: [SIM 2] *************** CSIM start ***************
+INFO: [SIM 4] CSIM will launch GCC as the compiler.
+   Compiling ../../../../basic_server/lzw_hw.cpp in debug mode
+   Generating csim.exe
+--- Running Test: User's String ---
+Input: "WYS*WYGWYS*WYSWYSG"
+  Input Length: 18 bytes
+TEST PASSED!
+  Output Length: 18 bytes
+  Compression Ratio: 1.00
+-------------------------------------------
+
+--- Running Test: Empty String ---
+Input: ""
+  Input Length: 0 bytes
+TEST PASSED!
+  Output Length: 0 bytes
+  Compression Ratio: 0.00
+-------------------------------------------
+
+--- Running Test: Single Char ---
+Input: "A"
+  Input Length: 1 bytes
+TEST PASSED!
+  Output Length: 2 bytes
+  Compression Ratio: 2.00
+-------------------------------------------
+
+--- Running Test: Repeated Chars ---
+Input: "AAAAAAAAAA"
+  Input Length: 10 bytes
+TEST PASSED!
+  Output Length: 7 bytes
+  Compression Ratio: 0.70
+-------------------------------------------
+
+--- Running Test: No Repetition ---
+Input: "ABCDEFGHIJK"
+  Input Length: 11 bytes
+TEST PASSED!
+  Output Length: 18 bytes
+  Compression Ratio: 1.64
+-------------------------------------------
+
+--- Running Test: Classic Example ---
+Input: "TOBEORNOTTOBEORTOBEORNOT"
+  Input Length: 24 bytes
+TEST PASSED!
+  Output Length: 26 bytes
+  Compression Ratio: 1.08
+-------------------------------------------
+
+--- Running Test: Long Repetition ---
+Input: "ABABABABABABABABABABABABABABABABABAB"
+  Input Length: 36 bytes
+TEST PASSED!
+  Output Length: 18 bytes
+  Compression Ratio: 0.50
+-------------------------------------------
+
+--- Running Test: 2K Random (Worst Case) ---
+Input: (string of length 2048)
+  Input Length: 2048 bytes
+TEST PASSED!
+  Output Length: 3286 bytes
+  Compression Ratio: 1.60
+-------------------------------------------
+
+--- Running Test: 2K Compressible (Best Case) ---
+Input: (string of length 2048)
+  Input Length: 2048 bytes
+TEST PASSED!
+  Output Length: 571 bytes
+  Compression Ratio: 0.28
+-------------------------------------------
+
+--- Running Test: 4K Random (Worst Case) ---
+Input: (string of length 4096)
+  Input Length: 4096 bytes
+TEST PASSED!
+  Output Length: 6471 bytes
+  Compression Ratio: 1.58
+-------------------------------------------
+
+--- Running Test: 4K Compressible (Best Case) ---
+Input: (string of length 4096)
+  Input Length: 4096 bytes
+TEST PASSED!
+  Output Length: 902 bytes
+  Compression Ratio: 0.22
+-------------------------------------------
+
+--- Running Test: 8K Random (Worst Case) ---
+Input: (string of length 8192)
+  Input Length: 8192 bytes
+TEST PASSED!
+  Output Length: 12575 bytes
+  Compression Ratio: 1.54
+-------------------------------------------
+
+--- Running Test: 8K Compressible (Best Case) ---
+Input: (string of length 8192)
+  Input Length: 8192 bytes
+TEST PASSED!
+  Output Length: 1452 bytes
+  Compression Ratio: 0.18
+-------------------------------------------
+
+
+=====================
+   Test Summary
+=====================
+13 / 13 tests passed.
+
+INFO: [SIM 1] CSim done with 0 errors.
+INFO: [SIM 3] *************** CSIM finish ***************

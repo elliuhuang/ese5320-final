@@ -1,0 +1,15 @@
+<AutoPilot:ProjectResources xmlns:AutoPilot="com.autoesl.autopilot.ui.directiveView">
+    <sourceFile name="">
+        <directive functionName="lzw_fpga" label="" functionLabel="">
+            <pragma name="TOP">
+                <option name="name" value="lzw_fpga"/>
+            </pragma>
+        </directive>
+        <directive functionName="lzw_fpga" label="" functionLabel="">
+            <pragma name="TOP">
+                <option name="name" value="lzw_fpga"/>
+            </pragma>
+        </directive>
+    </sourceFile>
+</AutoPilot:ProjectResources>
+
