@@ -1,0 +1,19 @@
+#
+# An unexpected error has occurred (11)
+#
+Stack:
+/lcars/software/linux/x86_64/ic-design/xilinx/2020.2/Vitis_HLS/2020.2/tps/lnx64/jre11.0.2/lib//server/libjvm.so(+0xc04c3b) [0x7f47f6404c3b]
+/lcars/software/linux/x86_64/ic-design/xilinx/2020.2/Vitis_HLS/2020.2/tps/lnx64/jre11.0.2/lib//server/libjvm.so(JVM_handle_linux_signal+0x14e) [0x7f47f64098de]
+/lcars/software/linux/x86_64/ic-design/xilinx/2020.2/Vitis_HLS/2020.2/tps/lnx64/jre11.0.2/lib//server/libjvm.so(+0xbfd538) [0x7f47f63fd538]
+/lib64/libc.so.6(+0x57900) [0x7f4815e57900]
+/lib64/libc.so.6(+0x5a0c3) [0x7f4815e5a0c3]
+/lib64/libc.so.6(+0x5a2ec) [0x7f4815e5a2ec]
+/usr/lib64/libX11.so.6(+0x48fde) [0x7f4816105fde]
+/usr/lib64/libX11.so.6(_XIOError+0x67) [0x7f4816106357]
+/usr/lib64/libX11.so.6(_XEventsQueued+0xa5) [0x7f4816103a95]
+/usr/lib64/libX11.so.6(XPending+0x5d) [0x7f48160f506d]
+/usr/lib64/libgdk-3.so.0(+0x8e381) [0x7f4814091381]
+/usr/lib64/libglib-2.0.so.0(+0x5c885) [0x7f4809316885]
+/usr/lib64/libglib-2.0.so.0(g_main_context_check+0x2a) [0x7f48093170da]
+/mnt/lcars/home/i/isgray/.Xilinx/vitis_hls/2020.2/workspace51/org.eclipse.osgi/250/0/.cp/libswt-pi3-gtk-4932r18.so(Java_org_eclipse_swt_internal_gtk_OS_g_1main_1context_1check+0x14) [0x7f470d24c104]
+[0x7f47e543da0f]

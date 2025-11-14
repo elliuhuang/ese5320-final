@@ -64,6 +64,10 @@ SERVER_SOURCES = basic_server/encoder.cpp basic_server/server.cpp basic_server/h
 SERVER_OBJECTS =$(SERVER_SOURCES:.cpp=.o)
 SERVER_EXE = encoder
 
+HOST_SOURCES = basic_server/host.cpp basic_server/server.cpp basic_server/hash_table.cpp
+HOST_OBJECTS =$(HOST_SOURCES:.cpp=.o)
+HOST_EXE = host
+
 DECODER_SOURCES = Decoder/Decoder.cpp
 DECODER_OBJECTS =$(DECODER_SOURCES:.cpp=.o)
 DECODER_EXE = decoder
@@ -87,6 +91,11 @@ $(CLIENT_EXE_MAC):
 
 $(SERVER_EXE): $(SERVER_OBJECTS)
 	$(HOST_CXX) -o "$@" $(+) $(LDFLAGS)
+
+$(HOST_EXE): $(HOST_OBJECTS)
+	$(HOST_CXX) -o "$@" $(+) $(LDFLAGS)
+
+
 	# -@echo $(VPP) --package --config fpga/package.cfg --package.kernel_image $(PLATFORM_REPO_PATHS)/sw/ese532_hw6_pfm/linux_domain/image/image.ub --package.rootfs $(PLATFORM_REPO_PATHS)/sw/ese532_hw6_pfm/linux_domain/rootfs/rootfs.ext4 $(XCLBIN)
 	# -@$(VPP) --package --config fpga/package.cfg --package.sd_file "$@" --package.kernel_image $(PLATFORM_REPO_PATHS)/sw/ese532_hw6_pfm/linux_domain/image/image.ub --package.rootfs $(PLATFORM_REPO_PATHS)/sw/ese532_hw6_pfm/linux_domain/rootfs/rootfs.ext4 $(XCLBIN)
 
@@ -107,7 +116,7 @@ fpga: package/sd_card.img
 .NOTPARALLEL: clean
 
 clean:
-	-$(RM) $(SERVER_EXE) $(SERVER_OBJECTS) $(DECODER_EXE) $(DECODER_OBJECTS) $(CLIENT_EXE) 
+	-$(RM) $(SERVER_EXE) $(SERVER_OBJECTS) $(HOST_EXE) $(HOST_OBJECTS) $(DECODER_EXE) $(DECODER_OBJECTS) $(CLIENT_EXE) 
 
 # clean-cpu:
 # 	-$(RM) $(CPU_EXE) $(CPU_OBJECTS) 
