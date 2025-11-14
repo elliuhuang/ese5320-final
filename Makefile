@@ -60,7 +60,7 @@ CLIENT_EXE = client
 CLIENT_SOURCES_MAC = Client/client-mac.cpp
 CLIENT_EXE_MAC = client_mac
 
-SERVER_SOURCES = Server/encoder.cpp Server/server.cpp
+SERVER_SOURCES = basic_server/encoder.cpp basic_server/server.cpp basic_server/hash_table.cpp
 SERVER_OBJECTS =$(SERVER_SOURCES:.cpp=.o)
 SERVER_EXE = encoder
 
@@ -101,7 +101,8 @@ $(DECODER_EXE): $(DECODER_OBJECTS)
 #
 
 .PHONY: fpga clean
-fpga: $(XCLBIN)
+# fpga: $(XCLBIN)
+fpga: package/sd_card.img
 
 .NOTPARALLEL: clean
 
@@ -109,20 +110,20 @@ clean:
 	-$(RM) $(SERVER_EXE) $(SERVER_OBJECTS) $(DECODER_EXE) $(DECODER_OBJECTS) $(CLIENT_EXE) 
 
 # clean-cpu:
-# 	-$(RM) $(CPU_EXE) $(CPU_OBJECTS)
-#
+# 	-$(RM) $(CPU_EXE) $(CPU_OBJECTS) 
+
 # clean-host:
-# 	-$(RM) $(HOST_EXE) $(HOST_OBJECTS)
-#
+# 	-$(RM) $(HOST_EXE) $(HOST_OBJECTS) 
+
 # clean-accelerators:
 # 	-$(RM) $(XCLBIN) $(XO) $(ALL_MESSAGE_FILES)
 # 	-$(RM) *.xclbin.sh *.xclbin.info *.xclbin.link_summary* *.compile_summary
-# 	-$(RMDIR) .Xil fpga/hls/proj_lzw
-#
+# 	-$(RMDIR) .Xil fpga/hls/proj_mmult
+
 # clean-package:
 # 	-${RMDIR} package
 # 	-${RMDIR} package.build
-#
+
 # clean: clean-cpu clean-host clean-accelerators clean-package
 # 	-$(RM) *.log *.package_summary
 # 	-${RMDIR} _x .ipcache
@@ -133,11 +134,11 @@ clean:
 
 $(XO): basic_server/lzw_hw.cpp
 	-@$(RM) $@
-	$(VPP) $(VPP_OPTS) -k lzw_fpga --compile -I"$(<D)" --config design.cfg -o"$@" "$<"
+	$(VPP) $(VPP_OPTS) --platform $(VITIS_PLATFORM_PATH) -k lzw_fpga --compile -I"$(<D)" --config design.cfg -o"$@" "$<"
 $(XCLBIN): $(XO)
-	$(VPP) $(VPP_OPTS) --link --config design.cfg -o"$@" $(+)
+	$(VPP) $(VPP_OPTS) --platform $(VITIS_PLATFORM_PATH) --link --config design.cfg -o"$@" $(+)
 
-package/sd_card.img: $(HOST_EXE) $(XCLBIN) xrt.ini
+package/sd_card.img: $(SERVER_EXE) $(XCLBIN) xrt.ini
 	$(VPP) --package $(VPP_OPTS) --config package.cfg $(XCLBIN) \
 		--package.out_dir package \
 		--package.sd_file $(HOST_EXE) \
