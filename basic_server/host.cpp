@@ -6,7 +6,7 @@
 
 #include "cdc.cpp"
 #include "sha.cpp"
-#include "lzw_fpga.cpp"
+#include "lzw_hw.cpp"
 #include "stopwatch.h"
 #include "encoder.h"
 #include "hash_table.h"
@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
         length &= ~DONE_BIT_H;
 
     //ENVIRONMENT INIT  
-    cl_int err;
+    cl_uchar err;
     std::string binaryFile = filename;
     unsigned fileBufSize;
     std::vector<cl::Device> devices = get_xilinx_devices();
@@ -210,7 +210,7 @@ void encode(unsigned char * block, int block_length, int done, cl::CommandQueue 
             //unsigned char * compressed = (unsigned char*)malloc(sizeof(unsigned char) * BLOCKSIZE * 2);
 
             // Node tree[4096];
-            cl_int compressed_length = 0;
+            cl_uchar compressed_length = 0;
 
         //Create Buffers and initialize test values
             cl::Buffer chunk_buf[chunk_len];
