@@ -1,9 +1,15 @@
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
+
+
+#include <cstdint>
+#include <cstdlib>
+#include <fstream>
 #include <iostream>
+#include <unistd.h>
+#include <vector>
+
 #include "encoder.h"
+
+
 #define MAX_CHUNK_SIZE 8192
 #define CODE_LENGTH 13  // ceil(log2(8192)) = 13 bits
 // Dictionary entry structure

@@ -4,94 +4,84 @@
 #include <string.h>
 #include <iostream>
 #include "encoder.h"
-
+#include <CL/cl2.hpp>
 
 #define MAX_CHUNK_SIZE 8192
 #define CODE_LENGTH 13  // ceil(log2(8192)) = 13 bits
-
-
-
-//compressed gives the leaf of each tree that the chunk has which is decoded using the tree array.
-void lzw(unsigned char *chunk, int chunk_len, int16_t *compressed, int *compressed_length, Node *tree) {
-
-    if(chunk_len == 0) {
-        throw "Zero sized chunk";
+// Dictionary entry structure
+typedef struct {
+    int prefix;      // -1 for single bytes, otherwise index of prefix
+    cl_uchar byte;
+} DictEntry;
+void lzw_fpga(cl_uchar *chunk, int chunk_len, cl_uchar *compressed, int *compressed_length) {
+    if (chunk_len == 0) {
+        *compressed_length = 0;
+        return;
     }
-    int16_t dictionary_index = 0;
-    int chunk_index = 0;
-    int count = 0;
-    int16_t dictionary[4096][256];
-    //Node tree[4096];
-    for(dictionary_index = 0; dictionary_index < 256; dictionary_index++) {
-        tree[dictionary_index].parent_key = -1;
-        tree[dictionary_index].val = dictionary_index;
+    // Initialize dictionary with 256 single-byte entries
+    DictEntry dictionary[sizeof(DictEntry) * MAX_CHUNK_SIZE];
+    for (int i = 0; i < 256; i++) {
+        dictionary[i].prefix = -1;
+        dictionary[i].byte = (cl_uchar)i;
     }
-
-    for (int i = 0; i < 4096; ++i) {
-        for (int j = 0; j < 256; ++j) {
-            dictionary[i][j] = -1;
+    int dict_size = 256;
+    // Output buffer for codes
+    uint16_t codes[sizeof(uint16_t) * MAX_CHUNK_SIZE];
+    int code_count = 0;
+    // LZW encoding
+    int current = chunk[0];  // Start with first byte
+    for (int i = 1; i < chunk_len; i++) {
+        cl_uchar next_byte = chunk[i];
+        // Search for current + next_byte in dictionary
+        int found = -1;
+        for (int j = 0; j < dict_size; j++) {
+            if (dictionary[j].prefix == current && dictionary[j].byte == next_byte) {
+                found = j;
+                break;
+            }
+        }
+        if (found != -1) {
+            // Found in dictionary, extend current
+            current = found;
+        } else {
+            // Not found, output current code
+            codes[code_count++] = current;
+            // Add new entry to dictionary
+            if (dict_size < MAX_CHUNK_SIZE) {
+                dictionary[dict_size].prefix = current;
+                dictionary[dict_size].byte = next_byte;
+                dict_size++;
+            }
+            // Start new sequence with next_byte
+            current = next_byte;
         }
     }
-
-    //int16_t compressed[chunk_len];
-
-    int16_t key = (int16_t)chunk[chunk_index];
-    chunk_index++;
-
-
-    while(chunk_index < chunk_len) {
-        int16_t chunk_char = chunk[chunk_index];
-        while(dictionary[key][chunk_char] != -1) {
-            key = dictionary[key][chunk_char];
-
-            chunk_index++;
-            chunk_char = chunk[chunk_index];
+    // Output the last code
+    codes[code_count++] = current;
+    // Pack codes into bytes (MSB-first, as specified)
+    int bit_pos = 0;  // Current bit position in output
+    int byte_pos = 0; // Current byte position in output
+    memset(compressed, 0, MAX_CHUNK_SIZE);
+    for (int i = 0; i < code_count; i++) {
+        uint16_t code = codes[i];
+        // Write CODE_LENGTH bits, MSB first
+        for (int bit = CODE_LENGTH - 1; bit >= 0; bit--) {
+            int bit_value = (code >> bit) & 1;
+            if (bit_value) {
+                compressed[byte_pos] |= (1 << (7 - bit_pos));
+            }
+            bit_pos++;
+            if (bit_pos == 8) {
+                bit_pos = 0;
+                byte_pos++;
+            }
         }
-        //Send key
-        compressed[count] = key;
-        //Store everything here
-
-        tree[dictionary_index].parent_key = key;
-        tree[dictionary_index].val = chunk_char;
-
-        dictionary[key][chunk_char] = dictionary_index++;
-
-        key = (int16_t)chunk[chunk_index];
-        chunk_index++;
-        count++;
     }
-
-    *compressed_length = count;
- 
-}
-
-int main(){
-    unsigned char chunk[] = "I AM SAM SAM I AM";
-    int16_t comp[17];
-    int compressed_length = 0;
-    Node tree[4096];
-
-    lzw(chunk, 17, comp, &compressed_length, tree);
-
-    for(int i = 0; i < compressed_length; i++) {
-    //     //printf("index %d: %d\n", i, tree[comp[i]].val);
-           //printf("%c, " ,tree[comp[i]].val);
-           //printf("%d, " ,tree[comp[i]].parent_key);
-
-           //printf("\n");
-         int temp = i;
-        while(tree[comp[temp]].parent_key != -1) {
-            // printf("%c, ",tree[comp[temp]].val);
-             temp = tree[comp[temp]].parent_key;
-            printf("%c, ",tree[comp[temp]].val);
-
-             //printf("in while\n");
-       }
-       printf("%c, ",tree[comp[temp]].val);
-       
+    // If we're not on a byte boundary, move to next byte (padding already zeros)
+    if (bit_pos != 0) {
+        byte_pos++;
     }
-    printf("\n");
- 
-    
-    return 0;
+    *compressed_length = byte_pos;
+    // free(dictionary);
+    // free(codes);
 }

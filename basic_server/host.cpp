@@ -1,21 +1,13 @@
-#define CL_HPP_CL_1_2_DEFAULT_BUILD
+ #define CL_HPP_CL_1_2_DEFAULT_BUILD
 #define CL_HPP_TARGET_OPENCL_VERSION 120
 #define CL_HPP_MINIMUM_OPENCL_VERSION 120
 #define CL_HPP_ENABLE_PROGRAM_CONSTRUCTION_FROM_ARRAY_COMPATIBILITY 1
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
 
+#include "host.h"
 #include <CL/cl2.hpp>
-#include <cstdint>
-#include <cstdlib>
-#include <fstream>
-#include <iostream>
-#include <unistd.h>
-#include <vector>
 
-#include "Server/stopwatch.h"
-#include "encoder.h"
-#include "hash_table.h"
-#include "server.h"
+
 
 #define NUM_PACKETS 8192
 #define pipe_depth 4
@@ -33,8 +25,8 @@ hash_map_t * global_hash_table;
 
 int lzw_chunk_count = 0;
 void handle_input(int argc, char* argv[], int* blocksize, char** filename);
-void encode(unsigned char * block, int block_length, int done);
-
+void encode(unsigned char * block, int block_length, int done, cl::CommandQueue q, cl::Kernel krnl_lzw, cl::Context context,
+                int* err);
 
 int main(int argc, char *argv[])
 {
@@ -89,7 +81,7 @@ int main(int argc, char *argv[])
         length &= ~DONE_BIT_H;
 
     //ENVIRONMENT INIT  
-    cl_int err;
+    cl_uchar err;
     std::string binaryFile = filename;
     unsigned fileBufSize;
     std::vector<cl::Device> devices = get_xilinx_devices();
@@ -103,7 +95,7 @@ int main(int argc, char *argv[])
     , &err);
     cl::Kernel krnl_lzw(program, "lzw_fpga", &err);
 
-    encode(&buffer[HEADER], length, done, q, krnl_lzw);
+    encode(&buffer[HEADER], length, done, q, krnl_lzw, context, &err);
 
     writer++;
 
@@ -168,7 +160,8 @@ int main(int argc, char *argv[])
 
 }
 
-void encode(unsigned char * block, int block_length, int done, cl::CommandQueue q, cl::Kernel krnl_lzw ) {
+void encode(unsigned char * block, int block_length, int done, cl::CommandQueue q, cl::Kernel krnl_lzw, 
+            cl::Context context, int* err) {
     memcpy(hold + hold_index, block, block_length);
     int block_length_new = block_length + hold_index;
 
@@ -205,24 +198,24 @@ void encode(unsigned char * block, int block_length, int done, cl::CommandQueue 
             //unsigned char * compressed = (unsigned char*)malloc(sizeof(unsigned char) * BLOCKSIZE * 2);
 
             // Node tree[4096];
-            cl_int compressed_length = 0;
+            cl_uchar compressed_length = 0;
 
         //Create Buffers and initialize test values
             cl::Buffer chunk_buf[chunk_len];
             cl::Buffer compressed_buf[chunk_len];
 
-            chunk_buf[i] = cl::Buffer(context, NULL, chunk_len * sizeof(unsigned char), NULL, &err); // kernel reads inputs from a?
-            compressed_buf[i] = cl::Buffer(context, NULL, chunk_len * sizeof(cl_short), NULL, &err); // kernel write outputs from b?
+            chunk_buf[i] = cl::Buffer(context, NULL, chunk_len * sizeof(unsigned char), NULL, err); // kernel reads inputs from a?
+            compressed_buf[i] = cl::Buffer(context, NULL, chunk_len * sizeof(cl_uchar), NULL, err); // kernel write outputs from b?
 
 
-            unsigned char *chunk_ptr[chunk_len];
-            cl_short *compressed_ptr[chunk_len];
+            unsigned char chunk_ptr[chunk_len];
+            cl_uchar compressed_ptr[chunk_len];
 
-            chunk_ptr = (unsigned char*)q.enqueueMapBuffer(chunk_ptr, CL_TRUE, CL_MAP_WRITE, 0,  chunk_len * sizeof(unsigned char)); // we write inputs to a?
+            chunk_ptr = (unsigned char*)q.enqueueMapBuffer(chunk_buf, CL_TRUE, CL_MAP_WRITE, 0,  chunk_len * sizeof(unsigned char)); // we write inputs to a?
             for(int i= 0; i < chunk_len; i++) {
             chunk_ptr[i] = hold[chunk_start + i];
             }
-            compressed_ptr = (cl_short *)q.enqueueMapBuffer(compressed_ptr, CL_TRUE, CL_MAP_READ, 0, chunk_len * sizeof(cl_short)); // we read outputs from b?
+            compressed_ptr = (cl_uchar *)q.enqueueMapBuffer(compressed_buf, CL_TRUE, CL_MAP_READ, 0, chunk_len * sizeof(cl_uchar)); // we read outputs from b?
 
             krnl_lzw.setArg(0, chunk_ptr);
             krnl_lzw.setArg(1, chunk_len);
