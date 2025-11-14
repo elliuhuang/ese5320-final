@@ -24,9 +24,9 @@ help:
 #######################################################################################
 
 # compiler tools
-# XILINX_VITIS ?= /media/lilbirb/research/Xilinx/Vitis/2020.1
-# XILINX_VIVADO ?= /media/lilbirb/research/Xilinx/Vivado/2020.1
-# XILINX_VIVADO_HLS ?= $(XILINX_VITIS)/Vivado_HLS
+XILINX_VITIS ?= /media/lilbirb/research/Xilinx/Vitis/2020.1
+XILINX_VIVADO ?= /media/lilbirb/research/Xilinx/Vivado/2020.1
+XILINX_VIVADO_HLS ?= $(XILINX_VITIS)/Vivado_HLS
 
 HOST_CXX ?= aarch64-linux-gnu-g++
 VPP ?= ${XILINX_VITIS}/bin/v++
@@ -47,9 +47,9 @@ VPP_OPTS = --target hw
 #
 # OpenCL kernel files
 #
-# XO := kernel.xo
-# XCLBIN := kernel.xclbin
-# ALL_MESSAGE_FILES = $(subst .xo,.mdb,$(XO)) $(subst .xclbin,.mdb,$(XCLBIN))
+XO := kernel.xo
+XCLBIN := kernel.xclbin
+ALL_MESSAGE_FILES = $(subst .xo,.mdb,$(XO)) $(subst .xclbin,.mdb,$(XCLBIN))
 
 #
 # host files
@@ -100,8 +100,8 @@ $(DECODER_EXE): $(DECODER_OBJECTS)
 # primary build targets
 #
 
-# .PHONY: fpga clean
-# fpga: $(XCLBIN)
+.PHONY: fpga clean
+fpga: $(XCLBIN)
 
 .NOTPARALLEL: clean
 
@@ -109,20 +109,20 @@ clean:
 	-$(RM) $(SERVER_EXE) $(SERVER_OBJECTS) $(DECODER_EXE) $(DECODER_OBJECTS) $(CLIENT_EXE) 
 
 # clean-cpu:
-# 	-$(RM) $(CPU_EXE) $(CPU_OBJECTS) 
-
+# 	-$(RM) $(CPU_EXE) $(CPU_OBJECTS)
+#
 # clean-host:
-# 	-$(RM) $(HOST_EXE) $(HOST_OBJECTS) 
-
+# 	-$(RM) $(HOST_EXE) $(HOST_OBJECTS)
+#
 # clean-accelerators:
 # 	-$(RM) $(XCLBIN) $(XO) $(ALL_MESSAGE_FILES)
 # 	-$(RM) *.xclbin.sh *.xclbin.info *.xclbin.link_summary* *.compile_summary
-# 	-$(RMDIR) .Xil fpga/hls/proj_mmult
-
+# 	-$(RMDIR) .Xil fpga/hls/proj_lzw
+#
 # clean-package:
 # 	-${RMDIR} package
 # 	-${RMDIR} package.build
-
+#
 # clean: clean-cpu clean-host clean-accelerators clean-package
 # 	-$(RM) *.log *.package_summary
 # 	-${RMDIR} _x .ipcache
@@ -131,8 +131,17 @@ clean:
 # binary container: kernel.xclbin
 #
 
-# $(XO): fpga/hls/MMult.cpp
-# 	-@$(RM) $@
-# 	$(VPP) $(VPP_OPTS) -k mmult_fpga --compile -I"$(<D)" --config fpga/design.cfg -o"$@" "$<"
-# $(XCLBIN): $(XO)
-# 	$(VPP) $(VPP_OPTS) --link --config fpga/design.cfg -o"$@" $(+)
+$(XO): basic_server/lzw_hw.cpp
+	-@$(RM) $@
+	$(VPP) $(VPP_OPTS) -k lzw_fpga --compile -I"$(<D)" --config design.cfg -o"$@" "$<"
+$(XCLBIN): $(XO)
+	$(VPP) $(VPP_OPTS) --link --config design.cfg -o"$@" $(+)
+
+package/sd_card.img: $(HOST_EXE) $(XCLBIN) xrt.ini
+	$(VPP) --package $(VPP_OPTS) --config package.cfg $(XCLBIN) \
+		--package.out_dir package \
+		--package.sd_file $(HOST_EXE) \
+		--package.kernel_image $(PLATFORM_REPO_PATHS)/sw/$(VITIS_PLATFORM)/PetaLinux/image/image.ub \
+		--package.rootfs $(PLATFORM_REPO_PATHS)/sw/$(VITIS_PLATFORM)/PetaLinux/rootfs/rootfs.ext4 \
+		--package.sd_file $(XCLBIN) \
+		--package.sd_file xrt.ini
