@@ -9,7 +9,8 @@
 // Powered by Google
 // Last account activity: 22 minutes ago
 // Details
-#include "cdc.cpp"
+#include "cdc_NEON.cpp"
+// #include "cdc.cpp"
 // Helper function to print chunks for debugging
 void print_chunks(unsigned char *block, int *chunk_indices, int num_chunks) {
     printf("Found %d chunks:\n", num_chunks);
